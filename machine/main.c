@@ -11,11 +11,12 @@ typedef struct {
   int value;
   int write;
   int dir;
+  int new_state;
 } Instruction;
 
 int main() {
 
-  FILE *file_ptr = fopen("source", "r");
+  FILE *file_ptr = fopen("source.tring", "r");
 
   Instruction *instructions[MAX_INSTRUCTIONS] = {0};
   int instr_count = 0;
@@ -37,6 +38,7 @@ int main() {
     inst->state = -1;
     inst->value = -1;
     inst->write = -1;
+    inst->new_state = -1;
     char *token;
     char *rest = line;
     int col = 0;
@@ -60,6 +62,8 @@ int main() {
                     : strcmp(token, "<") == 0 ? 0
                                               : -1;
         break;
+      case 4:
+        inst->new_state = atoi(token);
       default:
         break;
       }
@@ -81,6 +85,7 @@ int main() {
     printf("Value: %d\n", instructions[i]->value);
     printf("Write: %d\n", instructions[i]->write);
     printf("Shift: %d\n", instructions[i]->dir);
+    printf("New state: %d\n", instructions[i]->new_state);
     printf("\n");
   }
 

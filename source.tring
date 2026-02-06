@@ -1,0 +1,15 @@
+; State, Value, Write, Dir, New state
+
+; Palidrome.tring
+INSTRUCTIONS
+q0 0 0 > q0 ; In even state, read 0 -> stay even, move right
+q0 1 1 > q1 ; In even state, read 1 -> flip to odd, move right
+q0 _ _ N accept ; In even state, hit empty -> accept
+
+q1 0 0 > q1 ; In odd state, read 0 -> stay odd, move right
+q1 1 1 > q0 ; In odd state, read 1 -> flip to even, move right
+q1 _ _ N reject ; In odd state, hit blank -> reject
+
+MEMORY
+# aba
+_ 0 1 0 0 0 0 0 1 0 1 0 0 0 0 1 0 0 1 0 0 0 0 0 1

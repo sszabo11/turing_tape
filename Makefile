@@ -3,9 +3,9 @@ CFLAGS = -Wall -Wextra -pedantic -std=c17 -g -fsanitize=address -D_POSIX_C_SOURC
 LDFLAGS = `pkg-config --cflags --libs sdl3` -fsanitize=address -lm
 
 # List your source files here (add more as needed)
-SOURCES = main.c
+SOURCES = machine/main.c
 OBJECTS = $(SOURCES:.c=.o)
-TARGET = mygame
+TARGET = program
 
 all: $(TARGET)
 

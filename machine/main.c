@@ -1,3 +1,4 @@
+#include "hashmap.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +15,69 @@ typedef struct {
   int new_state;
 } Instruction;
 
-int main() {
+// HashMap - store state, read pairs of instructions
+//
 
+int main() {
+  srand(2);
+
+  HashTable *table = create(300);
+
+  if (table == NULL) {
+    printf("Failed to create hashtable\n");
+    free_table(table);
+    return 0;
+  }
+
+  const int key_len = 5;
+
+  for (int i = 0; i < 100; i++) {
+    int *value_ptr = malloc(sizeof(int));
+    if (value_ptr == NULL) {
+      continue;
+    }
+    *value_ptr = i;
+    char *key = malloc(key_len + 1);
+
+    if (key == NULL) {
+      printf("Failed to alloc key\n");
+      continue;
+    }
+
+    for (int j = 0; j < key_len; j++) {
+      int num = rand() % 26;
+      char letter = 'A' + num; // after ascii 65
+      key[j] = letter;
+    };
+
+    key[key_len] = '\0';
+    printf("%s\n", key);
+
+    const char *r = insert(table, key, value_ptr);
+
+    if (r == NULL) {
+      printf("Failed to insert key into hashmap\n");
+      free(key);
+      free_table(table);
+      return 0;
+    };
+
+    free(key);
+  }
+
+  int *v = get(table, "HMNMY");
+
+  if (v == NULL) {
+    printf("Value not found\n");
+    free_table(table);
+    return 0;
+  };
+
+  printf("Value: %d\n", *v);
+
+  free_table(table);
+
+  return 1;
   FILE *file_ptr = fopen("source.tring", "r");
 
   Instruction *instructions[MAX_INSTRUCTIONS] = {0};

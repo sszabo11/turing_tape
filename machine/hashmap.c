@@ -20,7 +20,7 @@ static uint64_t hash_key(const char *key) {
   return hash;
 }
 
-HashTable *create(int capacity) {
+HashTable *create_hashmap(int capacity) {
   HashTable *table = malloc(sizeof(HashTable));
   if (table == NULL) {
     return NULL;
@@ -39,7 +39,7 @@ HashTable *create(int capacity) {
   return table;
 }
 
-const char *insert(HashTable *table, const char *key, void *value) {
+const char *insert_value(HashTable *table, const char *key, void *value) {
   assert(value != NULL);
 
   if (value == NULL) {
@@ -53,7 +53,9 @@ const char *insert(HashTable *table, const char *key, void *value) {
   while (table->entries[index].key != NULL) {
     if (strcmp(key, table->entries[index].key) == 0) {
 
-      table->entries[index].value = &value;
+      // DUPLIcates CAUSED THe ERROR< FREE PREV MEM
+      free(table->entries[index].value);
+      table->entries[index].value = value;
       return table->entries[index].key;
     }
     index++;
@@ -64,7 +66,10 @@ const char *insert(HashTable *table, const char *key, void *value) {
   };
 
   char *key_clone = strdup(key);
-  if (key_clone == NULL) {
+  // char *value_clone = strdup((char *)value);
+  if (key_clone == NULL || value == NULL) {
+    // free(key_clone);
+    // free(value);
     return NULL;
   }
 
@@ -76,19 +81,21 @@ const char *insert(HashTable *table, const char *key, void *value) {
   return key;
 }
 
-int *get(HashTable *table, const char *key) {
+void *get_key_value(HashTable *table, const char *key) {
   uint64_t hash = hash_key(key);
 
   int index = hash % (table->capacity - 1);
 
   while (table->entries[index].key != NULL) {
+    // printf("E %s\n", table->entries[index].key);
     if (strcmp(key, table->entries[index].key) == 0) {
+      // printf("asd: %s\n", (char *)table->entries[index].value);
       return table->entries[index].value;
     }
 
     index++;
 
-    if (index > table->capacity) {
+    if (index >= table->capacity) {
       index = 0;
     }
   }
@@ -103,9 +110,10 @@ void free_table(HashTable *table) {
   for (int i = 0; i < table->capacity; i++) {
     if (table->entries[i].key != NULL) {
       free((void *)table->entries[i].key);
+      // free(table->entries[i].value);
     }
     if (table->entries[i].value != NULL) {
-      free((void *)table->entries[i].value);
+      free(table->entries[i].value);
     }
   }
   free(table->entries);

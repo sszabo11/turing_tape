@@ -2,35 +2,475 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
-#define _POSIX_C_SOURCE 200809L
 #include <string.h>
 
+#define _POSIX_C_SOURCE 200809L
 #define MAX_INSTRUCTIONS 300
+#define MAX_MEMORY 500
 
 typedef struct {
-  int state;
+  char *state;
   int value;
   int write;
-  int dir;
-  int new_state;
+  char *dir;
+  char *new_state;
 } Instruction;
 
-// HashMap - store state, read pairs of instructions
-//
+typedef struct {
+  int *memory;
+  int len;
+} Memory;
+
+typedef struct {
+  Memory *memory;
+  Instruction **instructions;
+  int num_instructions;
+  HashTable *instructions_table;
+  char state[64];
+  int cell;
+} Machine;
+
+char *read_file_to_string(const char *filename) {
+  FILE *file_ptr = fopen(filename, "rb");
+
+  if (file_ptr == NULL) {
+    perror("Error opening file");
+    return NULL;
+  };
+
+  fseek(file_ptr, 0, SEEK_END);
+  long length = ftell(file_ptr);
+  fseek(file_ptr, 0, SEEK_SET);
+
+  char *buffer = (char *)malloc(length + 1);
+
+  if (buffer == NULL) {
+    perror("Error allocating memory");
+    fclose(file_ptr);
+    return NULL;
+  }
+
+  size_t bytes_read = fread(buffer, 1, length, file_ptr);
+
+  if (bytes_read != length) {
+    perror("Error reading file");
+    free(buffer);
+    fclose(file_ptr);
+    return NULL;
+  }
+
+  buffer[length] = '\0';
+  fclose(file_ptr);
+
+  return buffer;
+}
+
+Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
+  const int LINE_LEN = 300;
+
+  FILE *file_ptr = fopen(path, "r");
+
+  if (file_ptr == NULL) {
+    perror("Failed to open file");
+    return 0;
+  }
+
+  // Instruction **instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
+
+  if (!instructions) {
+    fclose(file_ptr);
+    *out_count = 0;
+    return 0;
+  }
+
+  char line[LINE_LEN];
+
+  int count = 0;
+  int in_instructions = 0;
+  int in_memory = 0;
+
+  Memory *memory = malloc(sizeof(Memory));
+  memory->len = 0;
+  memory->memory = NULL;
+  while (fgets(line, sizeof(line), file_ptr)) {
+    // printf("LINE: %s", line);
+
+    if (line[0] == ';') {
+      continue;
+    }
+
+    size_t len = strlen(line);
+
+    if (len > 0 && line[len - 1] == '\n') {
+      line[len - 1] = '\0';
+    }
+    if (strncmp(line, "INSTRUCTIONS", 12) == 0) {
+      in_instructions = 1;
+      in_memory = 0;
+    }
+
+    if (strncmp(line, "MEMORY", 6) == 0) {
+      in_instructions = 0;
+      in_memory = 1;
+    }
+
+    if (in_instructions) {
+      char *line_copy = strdup(line);
+      if (!line_copy)
+        continue;
+
+      char *token = strtok(line_copy, ";");
+
+      if (token == NULL) {
+        free(line_copy);
+        continue;
+      }
+
+      Instruction *instr = calloc(1, sizeof(Instruction));
+      if (!instr) {
+        free(line_copy);
+        continue;
+      }
+
+      int col = 0;
+      // printf("Code: %s\n", token);
+      char *field = strtok(token, " \t");
+
+      while (field != NULL && col < 5) {
+        // printf("%s\n", field);
+
+        switch (col) {
+        case 0:
+          // State
+          instr->state = strdup(field);
+          break;
+        case 1:
+          // Value
+          instr->value = atoi(field);
+          break;
+        case 2:
+          // Write
+          instr->write = atoi(field);
+          break;
+        case 3:
+          // Direction
+          instr->dir = strdup(field);
+          break;
+        case 4:
+          // New state
+          instr->new_state = strdup(field);
+          break;
+        }
+
+        col++;
+        field = strtok(NULL, " \t");
+      }
+
+      if (col >= 3) {
+        if (count < MAX_INSTRUCTIONS) {
+
+          instructions[count++] = instr;
+        } else {
+          free(instr->state);
+          free(instr->dir);
+          free(instr->new_state);
+          free(instr);
+        }
+      } else {
+        free(instr->state);
+        free(instr->dir);
+        free(instr->new_state);
+        free(instr);
+      }
+      free(line_copy);
+    }
+
+    char tape[1024] = {0};
+
+    if (in_memory) {
+      if (*line && line[0] == '_') {
+
+        char *line_copy = strdup(line);
+        if (!line_copy)
+          continue;
+
+        char *token = strtok(line_copy, " ");
+
+        if (token == NULL) {
+          free(line_copy);
+          continue;
+        }
+
+        int i = 0;
+        while (token != NULL) {
+          if (*token == '_') {
+            token = strtok(NULL, " ");
+            continue;
+          }
+
+          // printf("%d\n", atoi(token));
+
+          tape[i] = *token;
+
+          token = strtok(NULL, " ");
+          i++;
+        }
+        free(line_copy);
+        int len = strlen(tape);
+        printf("len: %d", len);
+
+        if (memory->memory == NULL) {
+          memory->len = len;
+          memory->memory = malloc(memory->len * sizeof(int));
+          for (int i = 0; i < len; i++) {
+            memory->memory[i] = tape[i] - '0';
+          }
+        }
+      }
+    }
+  }
+
+  fclose(file_ptr);
+
+  *out_count = count;
+  return memory;
+}
+
+static void free_instruction(Instruction *instr) {
+  if (!instr)
+    return;
+  free(instr->state);
+  free(instr->dir);
+  free(instr->new_state);
+  free(instr);
+}
+
+void free_memory(Memory *mem) {
+  if (!mem)
+    return;
+  free(mem->memory);
+  free(mem);
+}
+
+/* Helper to free the whole array */
+void free_instructions(Instruction **instructions, int count) {
+  if (!instructions)
+    return;
+  for (int i = 0; i < count; i++) {
+    free_instruction(instructions[i]);
+  }
+  free(instructions);
+}
+
+Machine *init_machine() {
+  Machine *machine = malloc(sizeof(Machine));
+  strcpy(machine->state, "0");
+
+  machine->num_instructions = 0;
+
+  machine->instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
+  machine->memory = parse_file("binary.tring", &machine->num_instructions,
+                               machine->instructions);
+  machine->cell = 0;
+  machine->instructions_table = create_hashmap(machine->num_instructions);
+
+  return machine;
+}
+
+void encode_key(char *dest, int dest_size, char *state, int value) {
+  snprintf(dest, dest_size, "%s|%d", state, value);
+}
+
+void encode_value(char *dest, int dest_size, int write, char *dir,
+                  char *new_state) {
+  snprintf(dest, dest_size, "%d|%s|%s", write, dir, new_state);
+}
+
+void decode_value(Instruction *dest, char *str) {
+  if (!dest)
+    return;
+
+  int write;
+  char dir[20];
+  char dir2[20];
+  char _a[20];
+  char new_state[64];
+
+  sscanf(str, "%d|%s", &write, dir);
+  sscanf(dir, "%c|%[a-z0-9-]", _a, new_state);
+  sscanf(dir, "%c|", dir2);
+
+  dest->new_state = strdup(new_state);
+  dest->dir = strdup(dir2);
+  dest->write = write;
+}
+
+void free_machine(Machine *machine) { free(machine); }
+
+int execute_instruction(char *instruction_str, Machine *machine,
+                        Memory *memory) {
+  Instruction *instr = malloc(sizeof(Instruction));
+  decode_value(instr, instruction_str);
+
+  printf("\n");
+  printf("Write: %d \n", instr->write);
+  printf("Dir: %s \n", instr->dir);
+  printf("New state: %s\n", instr->new_state);
+
+  char *prefix = "hault";
+
+  // Check if state starts with hault, then end program
+  if (strncmp(instr->new_state, prefix, strlen(prefix)) == 0) {
+    free(instr->new_state);
+    free(instr->dir);
+    free(instr);
+    return 1;
+  }
+
+  // Update state
+  strcpy(machine->state, instr->new_state);
+
+  // Update cell memory position
+  if (*instr->dir == '>') {
+    if (machine->cell >= memory->len - 1) {
+      printf("rrrrr\n");
+      machine->cell = 0;
+    } else {
+      printf("aaaaaaa\n");
+      machine->cell++;
+    }
+  } else if (*instr->dir == '<') {
+    if (machine->cell == 0) {
+      machine->cell = memory->len - 1;
+    } else {
+      machine->cell--;
+    }
+
+  } else if (*instr->dir == '.') {
+    // Do nothing
+  }
+
+  // Update cell memory value
+  memory->memory[machine->cell] = instr->write;
+
+  if (memory->memory[machine->cell] != instr->write) {
+    printf("\033[0;32mUPDATED MEMORY!\n");
+    printf("\033[0m");
+  }
+
+  free(instr->new_state);
+  free(instr->dir);
+  free(instr);
+  return 0;
+}
 
 int main() {
   srand(2);
 
-  HashTable *table = create(300);
+  // Instruction **instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
 
+  // int num_instructions = 0;
+
+  // Memory *memory = parse_file("binary.tring", &num_instructions,
+  // instructions);
+
+  // Memory *start_memory;
+  // start_memory = memory;
+
+  Machine *machine = init_machine();
+
+  // HashTable *table = create_hashmap(num_instructions);
+
+  printf("STARTING MEMORY:\n");
+  for (int i = 0; i < machine->memory->len; i++) {
+    printf("%d", machine->memory->memory[i]);
+  }
+  printf("\n");
+
+  for (int i = 0; i < machine->num_instructions; i++) {
+
+    Instruction *intsr = machine->instructions[i];
+
+    char key[256];
+    char *value = malloc(256);
+    if (!value) {
+      continue;
+    }
+
+    encode_key(key, 256, intsr->state, intsr->value);
+    encode_value(value, 256, intsr->write, intsr->dir, intsr->new_state);
+    printf("Key: '%s'\n", key);
+    printf("Value: '%s'\n", value);
+
+    const char *r = insert_value(machine->instructions_table, key, value);
+
+    if (r == NULL) {
+      free(value);
+      printf("Failed to insert key into hashmap\n");
+      free_machine(machine);
+      free_memory(machine->memory);
+      free_instructions(machine->instructions, machine->num_instructions);
+      // free_memory(start_memory);
+      free_table(machine->instructions_table);
+      return 0;
+    };
+
+    printf("------------------\n");
+    printf("Instruction:\n");
+    printf("State: %s\n", intsr->state);
+    printf("Value: %d\n", intsr->value);
+    printf("Write: %d\n", intsr->write);
+    printf("Dir: %s\n", intsr->dir);
+    printf("New State: %s\n", intsr->new_state);
+    printf("------------------\n");
+    printf("\n");
+  };
+
+  int count = 0;
+  int hault = 0;
+  printf("Starting...\n");
+  while (!hault) {
+    if (count > 100) {
+      break;
+    }
+    int *cell = &machine->memory->memory[machine->cell];
+
+    char key[256];
+    encode_key(key, 256, machine->state, *cell);
+
+    printf("Getting key: '%s'\n", key);
+    char *instruction = get_key_value(machine->instructions_table, key);
+
+    if (instruction == NULL) {
+      printf("No instruction found\n");
+      count++;
+      continue;
+    }
+    printf("Found instruction: %s for key: %s\n", instruction, key);
+
+    hault = execute_instruction(instruction, machine, machine->memory);
+    count++;
+  }
+
+  printf("\nENDING MEMORY:\n");
+  for (int i = 0; i < machine->memory->len; i++) {
+    printf("%d", machine->memory->memory[i]);
+  }
+
+  free_memory(machine->memory);
+  free_instructions(machine->instructions, machine->num_instructions);
+  free_table(machine->instructions_table);
+  free_machine(machine);
+}
+
+void test_hashmap(HashTable *table) {
   if (table == NULL) {
     printf("Failed to create hashtable\n");
     free_table(table);
-    return 0;
+    return;
   }
 
-  const int key_len = 5;
-
+  int key_len = 5;
   for (int i = 0; i < 100; i++) {
     int *value_ptr = malloc(sizeof(int));
     if (value_ptr == NULL) {
@@ -53,105 +493,26 @@ int main() {
     key[key_len] = '\0';
     printf("%s\n", key);
 
-    const char *r = insert(table, key, value_ptr);
+    const char *r = insert_value(table, key, value_ptr);
 
     if (r == NULL) {
       printf("Failed to insert key into hashmap\n");
       free(key);
       free_table(table);
-      return 0;
+      return;
     };
 
     free(key);
   }
-
-  int *v = get(table, "HMNMY");
+  int *v = get_key_value(table, "HMNMY");
 
   if (v == NULL) {
     printf("Value not found\n");
     free_table(table);
-    return 0;
+    return;
   };
 
   printf("Value: %d\n", *v);
 
   free_table(table);
-
-  return 1;
-  FILE *file_ptr = fopen("source.tring", "r");
-
-  Instruction *instructions[MAX_INSTRUCTIONS] = {0};
-  int instr_count = 0;
-
-  int i = 0;
-  char line[300];
-
-  while (fgets(line, sizeof(line), file_ptr) &&
-         instr_count < MAX_INSTRUCTIONS) {
-
-    Instruction *inst = malloc(sizeof(Instruction));
-
-    if (!inst) {
-      fprintf(stderr, "Memory allocation failed\n");
-      break;
-    }
-
-    inst->dir = -1;
-    inst->state = -1;
-    inst->value = -1;
-    inst->write = -1;
-    inst->new_state = -1;
-    char *token;
-    char *rest = line;
-    int col = 0;
-
-    while ((token = strtok_r(rest, " \n", &rest)) != NULL) {
-      printf("Token: %s\n", token);
-
-      switch (col) {
-      case 0:
-        printf("d");
-        inst->state = atoi(token);
-        break;
-      case 1:
-        inst->value = atoi(token);
-        break;
-      case 2:
-        inst->write = atoi(token);
-        break;
-      case 3:
-        inst->dir = strcmp(token, ">") == 0   ? 1
-                    : strcmp(token, "<") == 0 ? 0
-                                              : -1;
-        break;
-      case 4:
-        inst->new_state = atoi(token);
-      default:
-        break;
-      }
-
-      col++;
-    };
-    if (col < 4) {
-      free(inst);
-      continue;
-    };
-
-    instructions[instr_count++] = inst;
-  };
-  fclose(file_ptr);
-
-  for (int i = 0; i < instr_count; i++) {
-    printf("Instruction\n");
-    printf("State: %d\n", instructions[i]->state);
-    printf("Value: %d\n", instructions[i]->value);
-    printf("Write: %d\n", instructions[i]->write);
-    printf("Shift: %d\n", instructions[i]->dir);
-    printf("New state: %d\n", instructions[i]->new_state);
-    printf("\n");
-  }
-
-  for (int i = 0; i < instr_count; i++) {
-    free(instructions[i]);
-  }
 }

@@ -44,9 +44,9 @@ typedef struct {
   size_t capacity;
 } HashTable;
 
-HashTable *create(int capacity);
+HashTable *create_hashmap(int capacity);
 
-const char *insert(HashTable *table, const char *key, void *value);
-int *get(HashTable *table, const char *key);
+const char *insert_value(HashTable *table, const char *key, void *value);
+void *get_key_value(HashTable *table, const char *key);
 
 void free_table(HashTable *table);

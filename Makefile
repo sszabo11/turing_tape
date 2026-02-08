@@ -19,7 +19,7 @@ clean:
 	rm -f $(OBJECTS) $(TARGET)
 
 run: $(TARGET)
-	./$(TARGET)
+	./$(TARGET) $(ARGS)
 
 .PHONY: all clean run
 

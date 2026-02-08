@@ -27,4 +27,4 @@ INSTRUCTIONS
 
 ; NO transitions from hault-* states — simulator halts on entry
 MEMORY
-_ 1 0 1 _
+_ 1 0 0 _

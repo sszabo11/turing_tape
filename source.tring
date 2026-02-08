@@ -1,17 +1,9 @@
-; this is a comment
+STATE_BEGIN
+q0
 
-; the following is the instructions
-instructions
-0 0 0 > q0 ; comment, dadada
-q0 0 0 > q0 ; goes - state, value, write, direction and new state
-q0 1 1 > q1
-q0 0 1 . hault-accept
+INSTRUCTIONS
+q0 0 _ > q1
+q1 _ 1 . hault-reject
 
-q1 0 0 > q1
-q1 1 1 > q0
-q1 0 0 . hault-reject
-
-; the following is the memory
-memory
-; this is binary input
+MEMORY
 _ 0 1 1 0 0

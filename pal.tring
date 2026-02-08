@@ -1,0 +1,85 @@
+; Palindrome Checker using pair encoding
+; Each input bit is encoded as a pair: 0 -> (1,0), 1 -> (1,1)
+; Consumed pairs become (0,1). Blank = (0,0).
+; Example: input "1 0 1" encoded as: 1 1 1 0 1 1
+STATE_BEGIN
+s0
+
+INSTRUCTIONS
+; === Phase 0: Move past initial blank ===
+s0 0 0 > FL1
+s0 1 1 > FL1
+; === Phase 1: Find Leftmost unconsumed pair (at 1st cell) ===
+FL1 1 1 > RL
+FL1 0 0 > FL2
+; FL2: At 2nd cell; check blank(0) vs consumed(1)
+FL2 0 0 . hault-accept
+FL2 1 1 > FL1
+; === Phase 2: Read leftmost pair's bit (at 2nd cell) ===
+; Then mark pair consumed: 2nd cell -> 1, go back, 1st cell -> 0
+RL 0 1 < MK0
+RL 1 1 < MK1
+; === Phase 3: Mark 1st cell of leftmost pair ===
+MK0 1 0 > SK0
+MK1 1 0 > SK1
+; Skip past the marked pair's 2nd cell to begin rightward scan
+SK0 1 1 > FR0a
+SK1 1 1 > FR1a
+; === Phase 4: Scan right to find end of data (remembering bit) ===
+; FR_a states: at 1st cell of a pair
+FR0a 1 1 > FR0b
+FR0a 0 0 > FC0
+FR1a 1 1 > FR1b
+FR1a 0 0 > FC1
+; FR_b states: at 2nd cell, skip it
+FR0b 0 0 > FR0a
+FR0b 1 1 > FR0a
+FR1b 0 0 > FR1a
+FR1b 1 1 > FR1a
+; FC states: 1st cell was 0, check 2nd cell for blank(0) vs consumed(1)
+FC0 0 0 < BK0a
+FC0 1 1 > FR0a
+FC1 0 0 < BK1a
+FC1 1 1 > FR1a
+; === Phase 5: Backtrack left to find rightmost unconsumed pair ===
+; BK_a: at 1st cell of blank pair, move left
+BK0a 0 0 < BK0b
+BK1a 0 0 < BK1b
+; BK_b: at 2nd cell of previous pair, move left
+BK0b 0 0 < BK0c
+BK0b 1 1 < BK0c
+BK1b 0 0 < BK1c
+BK1b 1 1 < BK1c
+; BK_c: at 1st cell of a pair; check if unconsumed (1) or consumed (0)
+BK0c 1 1 > CM0
+BK0c 0 0 < BK0d
+BK1c 1 1 > CM1
+BK1c 0 0 < BK1d
+; BK_d: consumed pair; at 2nd cell of pair further left
+; If 0 -> we've hit blank/boundary -> single middle element -> accept
+BK0d 1 1 < BK0c
+BK0d 0 0 . hault-accept
+BK1d 1 1 < BK1c
+BK1d 0 0 . hault-accept
+; === Phase 6: Compare rightmost pair's bit with remembered bit ===
+; CM states: at 2nd cell of rightmost unconsumed pair
+CM0 0 1 < MR1
+CM0 1 1 . hault-reject
+CM1 1 1 < MR1
+CM1 0 0 . hault-reject
+; === Phase 7: Mark rightmost pair consumed (1st cell -> 0) ===
+MR1 1 0 < GL2
+; === Phase 8: Go all the way left back to start ===
+; GL2: at 2nd cell position, moving left
+GL2 0 0 < GL1
+GL2 1 1 < GL1
+; GL1: at 1st cell position, moving left
+GL1 0 0 < GL2
+GL1 1 1 < GL2
+; When we hit the left boundary (blank area left of data), we read 0 at both positions
+; GL2 reading 0 -> GL1, GL1 reading 0 -> GL2... we need to detect the left edge
+; When GL1 reads 0 and the previous GL2 also read 0 -> we're in blank territory
+; Use extra state to detect two consecutive 0s while going left
+GL1 0 0 > FL1
+MEMORY
+_ 1 1 1 0 1 1

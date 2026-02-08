@@ -65,7 +65,23 @@ char *read_file_to_string(const char *filename) {
   return buffer;
 }
 
-Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
+int get_value(char *str) {
+  switch (*str) {
+  case '0':
+    return 0;
+  case '1':
+    return 1;
+  case '_':
+    return 2;
+  default:
+    return -1;
+    ;
+  }
+  return -1;
+}
+
+Memory *parse_file(char *path, int *out_count, Instruction **instructions,
+                   char *state) {
   const int LINE_LEN = 300;
 
   FILE *file_ptr = fopen(path, "r");
@@ -74,8 +90,6 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
     perror("Failed to open file");
     return 0;
   }
-
-  // Instruction **instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
 
   if (!instructions) {
     fclose(file_ptr);
@@ -88,12 +102,12 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
   int count = 0;
   int in_instructions = 0;
   int in_memory = 0;
+  int in_state = 0;
 
   Memory *memory = malloc(sizeof(Memory));
   memory->len = 0;
   memory->memory = NULL;
   while (fgets(line, sizeof(line), file_ptr)) {
-    // printf("LINE: %s", line);
 
     if (line[0] == ';') {
       continue;
@@ -104,14 +118,37 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
     if (len > 0 && line[len - 1] == '\n') {
       line[len - 1] = '\0';
     }
+    if (strncmp(line, "STATE_BEGIN", 11) == 0) {
+      in_instructions = 0;
+      in_memory = 0;
+      in_state = 1;
+      continue;
+    }
     if (strncmp(line, "INSTRUCTIONS", 12) == 0) {
       in_instructions = 1;
       in_memory = 0;
+      in_state = 0;
     }
 
     if (strncmp(line, "MEMORY", 6) == 0) {
       in_instructions = 0;
       in_memory = 1;
+      in_state = 0;
+    }
+
+    if (in_state) {
+      char s[12];
+      strcpy(s, line);
+
+      if (strlen(s) == 0) {
+        continue;
+      }
+
+      printf("State: '%s'\n", s);
+      printf("l: '%s'\n", line);
+
+      printf("\n");
+      strcpy(state, line);
     }
 
     if (in_instructions) {
@@ -133,11 +170,9 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
       }
 
       int col = 0;
-      // printf("Code: %s\n", token);
       char *field = strtok(token, " \t");
 
       while (field != NULL && col < 5) {
-        // printf("%s\n", field);
 
         switch (col) {
         case 0:
@@ -146,11 +181,11 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
           break;
         case 1:
           // Value
-          instr->value = atoi(field);
+          instr->value = get_value(field);
           break;
         case 2:
           // Write
-          instr->write = atoi(field);
+          instr->write = get_value(field);
           break;
         case 3:
           // Direction
@@ -208,8 +243,6 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
             continue;
           }
 
-          // printf("%d\n", atoi(token));
-
           tape[i] = *token;
 
           token = strtok(NULL, " ");
@@ -217,7 +250,6 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions) {
         }
         free(line_copy);
         int len = strlen(tape);
-        printf("len: %d", len);
 
         if (memory->memory == NULL) {
           memory->len = len;
@@ -262,17 +294,18 @@ void free_instructions(Instruction **instructions, int count) {
   free(instructions);
 }
 
-Machine *init_machine() {
+Machine *init_machine(char *filepath) {
   Machine *machine = malloc(sizeof(Machine));
   strcpy(machine->state, "0");
 
   machine->num_instructions = 0;
 
   machine->instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
-  machine->memory = parse_file("binary.tring", &machine->num_instructions,
-                               machine->instructions);
+  machine->memory = parse_file(filepath, &machine->num_instructions,
+                               machine->instructions, machine->state);
+  printf("%s\n", machine->state);
   machine->cell = 0;
-  machine->instructions_table = create_hashmap(machine->num_instructions);
+  machine->instructions_table = create_hashmap(machine->num_instructions * 2);
 
   return machine;
 }
@@ -297,7 +330,7 @@ void decode_value(Instruction *dest, char *str) {
   char new_state[64];
 
   sscanf(str, "%d|%s", &write, dir);
-  sscanf(dir, "%c|%[a-z0-9-]", _a, new_state);
+  sscanf(dir, "%c|%[a-z0-9A-Z-]", _a, new_state);
   sscanf(dir, "%c|", dir2);
 
   dest->new_state = strdup(new_state);
@@ -333,10 +366,8 @@ int execute_instruction(char *instruction_str, Machine *machine,
   // Update cell memory position
   if (*instr->dir == '>') {
     if (machine->cell >= memory->len - 1) {
-      printf("rrrrr\n");
       machine->cell = 0;
     } else {
-      printf("aaaaaaa\n");
       machine->cell++;
     }
   } else if (*instr->dir == '<') {
@@ -364,22 +395,10 @@ int execute_instruction(char *instruction_str, Machine *machine,
   return 0;
 }
 
-int main() {
+int main(int argc, char *argv[]) {
   srand(2);
 
-  // Instruction **instructions = calloc(MAX_INSTRUCTIONS, sizeof(Instruction));
-
-  // int num_instructions = 0;
-
-  // Memory *memory = parse_file("binary.tring", &num_instructions,
-  // instructions);
-
-  // Memory *start_memory;
-  // start_memory = memory;
-
-  Machine *machine = init_machine();
-
-  // HashTable *table = create_hashmap(num_instructions);
+  Machine *machine = init_machine(argv[1]);
 
   printf("STARTING MEMORY:\n");
   for (int i = 0; i < machine->memory->len; i++) {
@@ -428,9 +447,9 @@ int main() {
 
   int count = 0;
   int hault = 0;
-  printf("Starting...\n");
+  printf("State: %s | Starting...\n", machine->state);
   while (!hault) {
-    if (count > 100) {
+    if (count > 1000000) {
       break;
     }
     int *cell = &machine->memory->memory[machine->cell];
@@ -456,6 +475,8 @@ int main() {
   for (int i = 0; i < machine->memory->len; i++) {
     printf("%d", machine->memory->memory[i]);
   }
+
+  printf("\nRan '%s'\n", argv[1]);
 
   free_memory(machine->memory);
   free_instructions(machine->instructions, machine->num_instructions);

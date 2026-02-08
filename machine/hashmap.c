@@ -48,7 +48,7 @@ const char *insert_value(HashTable *table, const char *key, void *value) {
 
   uint64_t hash = hash_key(key);
 
-  int index = hash % (table->capacity - 1);
+  int index = hash % table->capacity;
 
   while (table->entries[index].key != NULL) {
     if (strcmp(key, table->entries[index].key) == 0) {
@@ -84,7 +84,9 @@ const char *insert_value(HashTable *table, const char *key, void *value) {
 void *get_key_value(HashTable *table, const char *key) {
   uint64_t hash = hash_key(key);
 
-  int index = hash % (table->capacity - 1);
+  int index = hash % table->capacity;
+
+  int probes = 0;
 
   while (table->entries[index].key != NULL) {
     // printf("E %s\n", table->entries[index].key);
@@ -93,10 +95,11 @@ void *get_key_value(HashTable *table, const char *key) {
       return table->entries[index].value;
     }
 
-    index++;
+    index = (index + 1) % table->capacity;
 
-    if (index >= table->capacity) {
-      index = 0;
+    if (++probes >= table->capacity) {
+      printf("ERROR: Table full or key not found after full scan\n");
+      return NULL;
     }
   }
 

@@ -9,6 +9,9 @@
 ;   4. Travel back to leftmost unmarked symbol
 ;   5. Repeat until all matched (accept) or mismatch found (reject)
 
+STATE_BEGIN
+s0
+
 INSTRUCTIONS
 
 ; === State s0: Read leftmost symbol ===
@@ -82,7 +85,7 @@ go-left _ _ > s0
 
 MEMORY
 ; Test input: 1 0 1 (palindrome — should accept)
-_ 1 0 1 _
+_ 1 0 0 0 0 _
 
 ; Other test cases to try:
 ; _ 1 0 0 1 _       (palindrome — accept)

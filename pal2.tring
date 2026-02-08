@@ -1,0 +1,95 @@
+; =====================================================
+; PALINDROME CHECKER (Pair Encoding)
+; =====================================================
+; Encoding: bit 0 -> (1,0), bit 1 -> (1,1)
+; Consumed pairs: (0,1), Blank: (0,0)
+;
+; Example below: "1 0 1" -> 1 1 1 0 1 1
+; Try "1 0" (not palindrome): _ 1 1 1 0
+; Try "1 1" (palindrome):     _ 1 1 1 1
+; Try "0"   (palindrome):     _ 1 0
+; =====================================================
+STATE_BEGIN
+s0
+INSTRUCTIONS
+; --- Start: move past initial blank ---
+s0 0 0 > FL1
+s0 1 1 > FL1
+; --- Find Leftmost unconsumed pair ---
+; FL1: at 1st cell of a pair
+FL1 1 1 > RL           ; found unconsumed pair
+FL1 0 0 > FL2          ; consumed or blank; check 2nd cell
+; FL2: at 2nd cell
+FL2 0 0 . hault-accept ; blank (0,0) -> all matched -> palindrome!
+FL2 1 1 > FL1          ; consumed (0,1) -> skip, next pair
+; --- Read leftmost pair's 2nd cell (the data bit) ---
+RL 0 1 < MK0           ; bit=0; write 1 to mark consumed; remember 0
+RL 1 1 < MK1           ; bit=1; already 1; remember 1
+; --- Mark 1st cell of leftmost pair as consumed ---
+MK0 1 0 > SK0          ; write 0 -> pair is now (0,1); go right
+MK1 1 0 > SK1          ; write 0 -> pair is now (0,1); go right
+; --- Skip past consumed pair's 2nd cell ---
+SK0 1 1 > FR0a         ; move to next pair's 1st cell
+SK1 1 1 > FR1a
+; --- Scan right to find end of data (remembering bit) ---
+; FR_a: at 1st cell of a pair
+FR0a 1 1 > FR0b        ; unconsumed pair; skip its 2nd cell
+FR0a 0 0 > FC0         ; consumed or blank; check 2nd cell
+FR1a 1 1 > FR1b
+FR1a 0 0 > FC1
+; FR_b: at 2nd cell; skip it
+FR0b 0 0 > FR0a
+FR0b 1 1 > FR0a
+FR1b 0 0 > FR1a
+FR1b 1 1 > FR1a
+; FC: 1st cell was 0; at 2nd cell now
+FC0 0 0 < BK0a         ; blank (0,0)! start backtracking left
+FC0 1 1 > FR0a         ; consumed (0,1); keep scanning right
+FC1 0 0 < BK1a
+FC1 1 1 > FR1a
+; --- Backtrack left to find rightmost unconsumed pair ---
+; BK_a: at 1st cell of blank pair (reads 0); move left
+BK0a 0 0 < BK0b
+BK1a 0 0 < BK1b
+; BK_b: at 2nd cell of previous pair; move left
+BK0b 0 0 < BK0c
+BK0b 1 1 < BK0c
+BK1b 0 0 < BK1c
+BK1b 1 1 < BK1c
+; BK_c: at 1st cell of a pair; check if unconsumed
+BK0c 1 1 > CM0         ; unconsumed! move right to 2nd cell to compare
+BK0c 0 0 < BK0d        ; consumed; continue left
+BK1c 1 1 > CM1
+BK1c 0 0 < BK1d
+; BK_d: at 2nd cell of pair further left
+BK0d 1 1 < BK0c        ; continue left to 1st cell
+BK0d 0 0 < BK0e        ; ambiguous: boundary or unconsumed bit-0
+BK1d 1 1 < BK1c
+BK1d 0 0 < BK1e
+; BK_e: disambiguation; one step left of the ambiguous 0
+BK0e 1 1 > CM0         ; unconsumed pair (1,0); right to 2nd cell
+BK0e 0 0 . hault-accept ; left boundary -> single middle element -> palindrome!
+BK1e 1 1 > CM1
+BK1e 0 0 . hault-accept
+; --- Compare rightmost pair's bit with remembered bit ---
+; CM: at 2nd cell of rightmost unconsumed pair
+CM0 0 1 < MR           ; bit=0 matches remembered 0! mark consumed
+CM0 1 1 . hault-reject ; mismatch -> not a palindrome
+CM1 1 1 < MR           ; bit=1 matches remembered 1! mark consumed
+CM1 0 0 . hault-reject ; mismatch -> not a palindrome
+; --- Mark rightmost pair's 1st cell consumed ---
+MR 1 0 < GLs           ; write 0 -> pair is (0,1); head left to restart
+; --- Return left to beginning ---
+; GLs: at 2nd-cell position (or boundary pos 0)
+GLs 1 1 < GLf          ; continue left
+GLs 0 0 < GLfc         ; ambiguous: boundary or unconsumed bit-0
+; GLf: at 1st-cell position
+GLf 0 0 < GLs          ; continue left
+GLf 1 1 < GLs          ; continue left
+; GLfc: disambiguation
+GLfc 1 1 < GLs         ; was at unconsumed pair's 2nd cell; keep going
+GLfc 0 0 > GLr         ; hit left boundary (pos -1); go right
+; GLr: back at pos 0; move right to restart
+GLr 0 0 > FL1
+MEMORY
+_ 1 1 1 0 1 1

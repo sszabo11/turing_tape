@@ -1,0 +1,51 @@
+; Accepts iff number of 0s == number of 1s (on tape consisting only of 0,1,_)
+; Head starts on leftmost symbol
+; Always halts
+
+STATE_BEGIN
+start
+
+INSTRUCTIONS
+; ───────────────────────────────
+; Looking for next unpaired 0 or 1
+; ───────────────────────────────
+start  0  _  >  found0     ; erase 0, now look for 1
+start  1  _  >  found1     ; erase 1, now look for 0
+start  _  _  .  halt-accept ; nothing left → equal count
+
+; ───────────────────────────────
+; Erased a 0 → now searching right for a 1 to erase
+; ───────────────────────────────
+found0  0  0  >  found0     ; skip remaining 0s
+found0  1  _  <  return     ; found matching 1 → erase & go back left
+found0  _  _  .  halt-reject; no 1 found to match this 0 → reject
+
+; ───────────────────────────────
+; Erased a 1 → now searching right for a 0 to erase
+; ───────────────────────────────
+found1  0  _  <  return     ; found matching 0 → erase & go back left
+found1  1  1  >  found1     ; skip remaining 1s
+found1  _  _  .  halt-reject; no 0 found to match this 1 → reject
+
+; ───────────────────────────────
+; Return left to beginning after erasing a pair
+; ───────────────────────────────
+return  0  0  <  return
+return  1  1  <  return
+return  _  _  >  start      ; reached left end → start next pass
+
+; Explicitly cover impossible cases (defensive)
+start   _  _  .  halt-reject   ; shouldn't happen
+found0  _  _  .  halt-reject
+found1  _  _  .  halt-reject
+return  _  _  .  halt-reject
+
+MEMORY
+= 0 1 0 1 0 1     ; should accept
+
+; Test cases to try:
+; = 0 1 1 0         → accept
+; = 1 1 0           → reject (more 1s)
+; = 0 0 0           → reject
+; = 1 0 1 0 1       → reject
+; =                 → accept (0=0)

@@ -155,7 +155,7 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
     }
 
     if (in_state) {
-      char s[12];
+      char s[32];
       strcpy(s, line);
 
       if (strlen(s) == 0) {
@@ -241,9 +241,16 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
     char tape[1024] = {0};
 
     if (in_memory) {
-      if (*line && line[0] == '_') {
+      if (*line && line[0] == '=') {
 
         char *line_copy = strdup(line);
+        char *not_comment = strtok(line_copy, ";");
+        if (not_comment == NULL) {
+          free(line_copy);
+          continue;
+        }
+        printf("%s\n", not_comment);
+
         if (!line_copy)
           continue;
 
@@ -256,7 +263,7 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
 
         int i = 0;
         while (token != NULL) {
-          if (*token == '_') {
+          if (*token == '=') {
             token = strtok(NULL, " ");
             continue;
           }
@@ -348,7 +355,7 @@ void decode_value(Instruction *dest, char *str) {
   char new_state[64];
 
   sscanf(str, "%d|%s", &write, dir);
-  sscanf(dir, "%c|%[a-z0-9A-Z-]", _a, new_state);
+  sscanf(dir, "%c|%[a-z0-9A-Z-_]", _a, new_state);
   sscanf(dir, "%c|", dir2);
 
   dest->new_state = strdup(new_state);
@@ -368,7 +375,7 @@ int execute_instruction(char *instruction_str, Machine *machine,
   // printf("Dir: %s \n", instr->dir);
   // printf("New state: %s\n", instr->new_state);
   printf("%s\n", instr->dir);
-  char *prefix = "hault";
+  char *prefix = "halt";
 
   // Check if state starts with hault, then end program
   if (strncmp(instr->new_state, prefix, strlen(prefix)) == 0) {
@@ -422,7 +429,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < machine->memory->len; i++) {
     printf("%d", machine->memory->memory[i]);
   }
-  // printf("\n");
+  printf("\n");
 
   for (int i = 0; i < machine->num_instructions; i++) {
 
@@ -491,7 +498,7 @@ int main(int argc, char *argv[]) {
     count++;
     struct timespec ts;
     ts.tv_sec = 0;
-    ts.tv_nsec = 300 * 1000000;
+    ts.tv_nsec = 100 * 1000000;
     nanosleep(&ts, NULL);
   }
 

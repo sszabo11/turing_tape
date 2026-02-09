@@ -3,7 +3,7 @@ CFLAGS = -Wall -Wextra -pedantic -std=c17 -g -fsanitize=address -D_POSIX_C_SOURC
 LDFLAGS = `pkg-config --cflags --libs sdl3` -fsanitize=address -lm
 
 # List your source files here (add more as needed)
-SOURCES = machine/main.c machine/hashmap.c
+SOURCES = machine/main.c machine/hashmap.c machine/draw.c
 OBJECTS = $(SOURCES:.c=.o)
 TARGET = program
 

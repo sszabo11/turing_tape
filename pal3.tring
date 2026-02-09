@@ -1,0 +1,32 @@
+; Palindrome checker for binary strings
+; Algorithm: Repeatedly match and erase the leftmost and rightmost symbols
+; Accept if all symbols match; reject on mismatch
+STATE_BEGIN
+q0
+INSTRUCTIONS
+; q0: Read the leftmost symbol and remember it
+q0 _  _  .  halt-accept   ; No symbols left (or empty input) → palindrome
+q0 0  _  >  goR0          ; Remember 0, erase it, move right
+q0 1  _  >  goR1          ; Remember 1, erase it, move right
+; goR0: Move right to find the rightmost symbol (remembered 0)
+goR0 0  0  >  goR0        ; Skip over 0
+goR0 1  1  >  goR0        ; Skip over 1
+goR0 _  _  <  chk0        ; Passed the end, move left to rightmost symbol
+; goR1: Move right to find the rightmost symbol (remembered 1)
+goR1 0  0  >  goR1        ; Skip over 0
+goR1 1  1  >  goR1        ; Skip over 1
+goR1 _  _  <  chk1        ; Passed the end, move left to rightmost symbol
+; chk0: Check that the rightmost symbol is 0
+chk0 0  _  <  goL         ; Match! Erase it, head back left
+chk0 1  1  .  halt-reject ; Mismatch → not a palindrome
+chk0 _  _  .  halt-accept ; Only one symbol was left (the 0 we erased) → palindrome
+; chk1: Check that the rightmost symbol is 1
+chk1 0  0  .  halt-reject ; Mismatch → not a palindrome
+chk1 1  _  <  goL         ; Match! Erase it, head back left
+chk1 _  _  .  halt-accept ; Only one symbol was left (the 1 we erased) → palindrome
+; goL: Move left to return to the leftmost remaining symbol
+goL 0  0  <  goL          ; Skip over 0
+goL 1  1  <  goL          ; Skip over 1
+goL _  _  >  q0           ; Passed the left end, move right to start next round
+MEMORY
+_ 1 0 1

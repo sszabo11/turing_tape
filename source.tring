@@ -3,7 +3,7 @@ q0
 
 INSTRUCTIONS
 q0 0 _ > q1
-q1 _ 1 . hault-reject
+o i1 _ 1 . hault-reject
 
 MEMORY
 _ 0 1 1 0 0

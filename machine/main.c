@@ -1,4 +1,7 @@
-#include "hashmap.h"
+#include "main.h"
+#include "draw.h"
+#include "unistd.h"
+//  #include "hashmap.h"
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,27 +11,27 @@
 #define MAX_INSTRUCTIONS 300
 #define MAX_MEMORY 500
 
-typedef struct {
-  char *state;
-  int value;
-  int write;
-  char *dir;
-  char *new_state;
-} Instruction;
-
-typedef struct {
-  int *memory;
-  int len;
-} Memory;
-
-typedef struct {
-  Memory *memory;
-  Instruction **instructions;
-  int num_instructions;
-  HashTable *instructions_table;
-  char state[64];
-  int cell;
-} Machine;
+// typedef struct {
+//   char *state;
+//   int value;
+//   int write;
+//   char *dir;
+//   char *new_state;
+// } Instruction;
+//
+// typedef struct {
+//   int *memory;
+//   int len;
+// } Memory;
+//
+// typedef struct {
+//   Memory *memory;
+//   Instruction **instructions;
+//   int num_instructions;
+//   HashTable *instructions_table;
+//   char state[64];
+//   int cell;
+// } Machine;
 
 char *read_file_to_string(const char *filename) {
   FILE *file_ptr = fopen(filename, "rb");
@@ -78,6 +81,20 @@ int get_value(char *str) {
     ;
   }
   return -1;
+}
+
+char *print_cell_value(int *val) {
+
+  switch (*val) {
+  case 0:
+    return "0";
+  case 1:
+    return "1";
+  case 2:
+    return "_";
+  default:
+    return NULL;
+  }
 }
 
 Memory *parse_file(char *path, int *out_count, Instruction **instructions,
@@ -345,11 +362,11 @@ int execute_instruction(char *instruction_str, Machine *machine,
   Instruction *instr = malloc(sizeof(Instruction));
   decode_value(instr, instruction_str);
 
-  printf("\n");
-  printf("Write: %d \n", instr->write);
-  printf("Dir: %s \n", instr->dir);
-  printf("New state: %s\n", instr->new_state);
-
+  // printf("\n");
+  // printf("Write: %d \n", instr->write);
+  // printf("Dir: %s \n", instr->dir);
+  // printf("New state: %s\n", instr->new_state);
+  printf("%s\n", instr->dir);
   char *prefix = "hault";
 
   // Check if state starts with hault, then end program
@@ -404,7 +421,7 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < machine->memory->len; i++) {
     printf("%d", machine->memory->memory[i]);
   }
-  printf("\n");
+  // printf("\n");
 
   for (int i = 0; i < machine->num_instructions; i++) {
 
@@ -418,8 +435,8 @@ int main(int argc, char *argv[]) {
 
     encode_key(key, 256, intsr->state, intsr->value);
     encode_value(value, 256, intsr->write, intsr->dir, intsr->new_state);
-    printf("Key: '%s'\n", key);
-    printf("Value: '%s'\n", value);
+    // printf("Key: '%s'\n", key);
+    // printf("Value: '%s'\n", value);
 
     const char *r = insert_value(machine->instructions_table, key, value);
 
@@ -434,21 +451,22 @@ int main(int argc, char *argv[]) {
       return 0;
     };
 
-    printf("------------------\n");
-    printf("Instruction:\n");
-    printf("State: %s\n", intsr->state);
-    printf("Value: %d\n", intsr->value);
-    printf("Write: %d\n", intsr->write);
-    printf("Dir: %s\n", intsr->dir);
-    printf("New State: %s\n", intsr->new_state);
-    printf("------------------\n");
-    printf("\n");
+    // printf("------------------\n");
+    // printf("Instruction:\n");
+    // printf("State: %s\n", intsr->state);
+    // printf("Value: %d\n", intsr->value);
+    // printf("Write: %d\n", intsr->write);
+    // printf("Dir: %s\n", intsr->dir);
+    // printf("New State: %s\n", intsr->new_state);
+    // printf("------------------\n");
+    // printf("\n");
   };
 
   int count = 0;
   int hault = 0;
   printf("State: %s | Starting...\n", machine->state);
   while (!hault) {
+    draw(machine);
     if (count > 1000000) {
       break;
     }
@@ -457,24 +475,28 @@ int main(int argc, char *argv[]) {
     char key[256];
     encode_key(key, 256, machine->state, *cell);
 
-    printf("Getting key: '%s'\n", key);
+    // printf("Getting key: '%s'\n", key);
     char *instruction = get_key_value(machine->instructions_table, key);
 
     if (instruction == NULL) {
-      printf("No instruction found\n");
+      // printf("No instruction found\n");
+      hault = 1;
       count++;
       continue;
     }
-    printf("Found instruction: %s for key: %s\n", instruction, key);
+    // printf("Found instruction: %s for key: %s\n", instruction, key);
 
     hault = execute_instruction(instruction, machine, machine->memory);
     count++;
+    sleep(1);
   }
 
-  printf("\nENDING MEMORY:\n");
-  for (int i = 0; i < machine->memory->len; i++) {
-    printf("%d", machine->memory->memory[i]);
-  }
+  // printf("\nENDING MEMORY:\n");
+  // for (int i = 0; i < machine->memory->len; i++) {
+  //   char *val = print_cell_value(&machine->memory->memory[i]);
+
+  //  printf("%s", val);
+  //}
 
   printf("\nRan '%s'\n", argv[1]);
 

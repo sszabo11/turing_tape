@@ -1,5 +1,6 @@
 #include "main.h"
 #include "draw.h"
+#include "time.h"
 #include "unistd.h"
 //  #include "hashmap.h"
 #include <stdint.h>
@@ -479,7 +480,7 @@ int main(int argc, char *argv[]) {
     char *instruction = get_key_value(machine->instructions_table, key);
 
     if (instruction == NULL) {
-      // printf("No instruction found\n");
+      printf("No instruction found\n");
       hault = 1;
       count++;
       continue;
@@ -488,7 +489,10 @@ int main(int argc, char *argv[]) {
 
     hault = execute_instruction(instruction, machine, machine->memory);
     count++;
-    sleep(1);
+    struct timespec ts;
+    ts.tv_sec = 0;
+    ts.tv_nsec = 300 * 1000000;
+    nanosleep(&ts, NULL);
   }
 
   // printf("\nENDING MEMORY:\n");

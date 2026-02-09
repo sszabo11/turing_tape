@@ -29,6 +29,39 @@ void draw(Machine *machine) {
   printf("%s\n\n", machine->state);
   assert(height % 2 != 0);
 
+  // for (int col = 0; col < len; col++) {
+
+  //  int index = (col) % (height);
+
+  //  if ((col) % height == 0 && ((col) / height == machine->cell)) {
+  //    printf("↓");
+  //  } else {
+
+  //    printf(" ");
+  //  }
+  //}
+  // for (int col = 0; col < len; col++) {
+  //  if (col == machine->cell) {
+  //    printf("↓");
+  //  } else {
+  //    printf(" ");
+  //
+  //  }
+  //}
+
+  for (int col = 0; col < machine->memory->len; col++) {
+    for (int h = 0; h < height; h++) {
+      if (col == machine->cell && h == height / 2 + 1) {
+        printf("↓"); // Center the arrow
+      } else {
+        printf(" ");
+      }
+    }
+    printf(" "); // Space for the separator column
+  }
+
+  printf("\n");
+
   for (int row = 0; row < height; row++) {
     for (int col = 0; col < len; col++) {
       if (col == 0 || col % height == 0) {

@@ -92,4 +92,4 @@ GLfc 0 0 > GLr         ; hit left boundary (pos -1); go right
 ; GLr: back at pos 0; move right to restart
 GLr 0 0 > FL1
 MEMORY
-_ 1 1 1 0 1 1
+_ 1 1 1 0 1 1 0 1 1 0 0 1 1 1 0 0 0 0

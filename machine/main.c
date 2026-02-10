@@ -352,12 +352,11 @@ void decode_value(Instruction *dest, char *str) {
   char dir[20];
   char dir2[20];
   char _a[20];
-  char new_state[64];
+  char new_state[128];
 
   sscanf(str, "%d|%s", &write, dir);
-  sscanf(dir, "%c|%[a-z0-9A-Z-_]", _a, new_state);
+  sscanf(dir, "%c|%[a-z0-9A-Z_-]", _a, new_state);
   sscanf(dir, "%c|", dir2);
-
   dest->new_state = strdup(new_state);
   dest->dir = strdup(dir2);
   dest->write = write;
@@ -374,20 +373,27 @@ int execute_instruction(char *instruction_str, Machine *machine,
   // printf("Write: %d \n", instr->write);
   // printf("Dir: %s \n", instr->dir);
   // printf("New state: %s\n", instr->new_state);
-  printf("%s\n", instr->dir);
   char *prefix = "halt";
+
+  // Update state
+  strcpy(machine->state, instr->new_state);
 
   // Check if state starts with hault, then end program
   if (strncmp(instr->new_state, prefix, strlen(prefix)) == 0) {
+    printf("Reached halt state. Ending...\n");
     free(instr->new_state);
     free(instr->dir);
     free(instr);
     return 1;
   }
 
-  // Update state
-  strcpy(machine->state, instr->new_state);
+  // Update cell memory value
+  memory->memory[machine->cell] = instr->write;
 
+  if (memory->memory[machine->cell] != instr->write) {
+    printf("\033[0;32mUPDATED MEMORY!\n");
+    printf("\033[0m");
+  }
   // Update cell memory position
   if (*instr->dir == '>') {
     if (machine->cell >= memory->len - 1) {
@@ -404,14 +410,6 @@ int execute_instruction(char *instruction_str, Machine *machine,
 
   } else if (*instr->dir == '.') {
     // Do nothing
-  }
-
-  // Update cell memory value
-  memory->memory[machine->cell] = instr->write;
-
-  if (memory->memory[machine->cell] != instr->write) {
-    printf("\033[0;32mUPDATED MEMORY!\n");
-    printf("\033[0m");
   }
 
   free(instr->new_state);
@@ -501,6 +499,11 @@ int main(int argc, char *argv[]) {
     ts.tv_nsec = 100 * 1000000;
     nanosleep(&ts, NULL);
   }
+  struct timespec ts;
+  ts.tv_sec = 0;
+  ts.tv_nsec = 100 * 1000000;
+  nanosleep(&ts, NULL);
+  draw(machine);
 
   // printf("\nENDING MEMORY:\n");
   // for (int i = 0; i < machine->memory->len; i++) {

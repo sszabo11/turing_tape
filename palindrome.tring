@@ -1,0 +1,34 @@
+; Turing machine to check if the input binary string is a palindrome
+STATE_BEGIN
+q0
+
+INSTRUCTIONS
+q0 0 _ > q1_0
+q0 1 _ > q1_1
+q0 _ _ . halt-accept
+q1_0 0 0 > carry0
+q1_0 1 1 > carry0
+q1_0 _ _ . halt-accept
+q1_1 0 0 > carry1
+q1_1 1 1 > carry1
+q1_1 _ _ . halt-accept
+carry0 0 0 > carry0
+carry0 1 1 > carry0
+carry0 _ _ < match0
+carry1 0 0 > carry1
+carry1 1 1 > carry1
+carry1 _ _ < match1
+match0 0 _ < return
+match0 1 1 . halt-reject
+match0 _ _ . halt-reject
+match1 0 0 . halt-reject
+match1 1 _ < return
+match1 _ _ . halt-reject
+return 0 0 < return
+return 1 1 < return
+return _ _ > q0
+
+MEMORY
+1 1 0 0 0 1 1 #accept
+1 0 0 1 0 #reject
+1 1 0 0 0 1 #reject 

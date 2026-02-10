@@ -29,6 +29,4 @@ return 1 1 < return
 return _ _ > q0
 
 MEMORY
-1 1 0 0 0 1 1 #accept
-1 0 0 1 0 #reject
-1 1 0 0 0 1 #reject 
+= 1 0 0 0 1

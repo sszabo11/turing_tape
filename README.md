@@ -3,15 +3,15 @@ A turing machine emulator in C. Built as a project to better learn C. 🧠
 
 ## Usage
 - Write a .tring file with instructions and input memory.
-- Or describe a problem and feed in the skills.md file to an AI model
+- Or describe a problem to AI by feeding in the prompt.md file.
 
 ## Features
-* Turing complete
+* Turing complete 🥳
 * Turing instruction language
-* Visualize turing machine in terminal
+* Visualize turing machine in terminal 🤙
 
 ## How it works
-1. Read .tring file
+1. Read .tring file 📑
 2. Parse each line and extract instructions, memory, state
 3. Store (state, value) as key in hashmap to value (write, direction, new_state)
 4. Start at inital state and at cell 0
@@ -21,5 +21,6 @@ A turing machine emulator in C. Built as a project to better learn C. 🧠
 8. Turing Complete!!
 
 ## Peformance
-* 
+* 2.061662 seconds for 200 digit palindrome
+
 

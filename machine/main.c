@@ -12,28 +12,6 @@
 #define MAX_INSTRUCTIONS 300
 #define MAX_MEMORY 500
 
-// typedef struct {
-//   char *state;
-//   int value;
-//   int write;
-//   char *dir;
-//   char *new_state;
-// } Instruction;
-//
-// typedef struct {
-//   int *memory;
-//   int len;
-// } Memory;
-//
-// typedef struct {
-//   Memory *memory;
-//   Instruction **instructions;
-//   int num_instructions;
-//   HashTable *instructions_table;
-//   char state[64];
-//   int cell;
-// } Machine;
-
 char *read_file_to_string(const char *filename) {
   FILE *file_ptr = fopen(filename, "rb");
 
@@ -100,7 +78,7 @@ char *print_cell_value(int *val) {
 
 Memory *parse_file(char *path, int *out_count, Instruction **instructions,
                    char *state) {
-  const int LINE_LEN = 300;
+  const int LINE_LEN = 900;
 
   FILE *file_ptr = fopen(path, "r");
 
@@ -155,7 +133,7 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
     }
 
     if (in_state) {
-      char s[32];
+      char s[128];
       strcpy(s, line);
 
       if (strlen(s) == 0) {
@@ -238,18 +216,18 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
       free(line_copy);
     }
 
-    char tape[1024] = {0};
+    char tape[5048] = {0};
 
     if (in_memory) {
       if (*line && line[0] == '=') {
 
         char *line_copy = strdup(line);
-        char *not_comment = strtok(line_copy, ";");
-        if (not_comment == NULL) {
-          free(line_copy);
-          continue;
-        }
-        printf("%s\n", not_comment);
+        // char *not_comment = strtok(line_copy, ";");
+        //  if (not_comment == NULL) {
+        //    free(line_copy);
+        //    continue;
+        //  }
+        //  printf("C: %s\n", not_comment);
 
         if (!line_copy)
           continue;
@@ -275,12 +253,13 @@ Memory *parse_file(char *path, int *out_count, Instruction **instructions,
         }
         free(line_copy);
         int len = strlen(tape);
-
+        printf("Len: %d\n", len);
         if (memory->memory == NULL) {
           memory->len = len;
           memory->memory = malloc(memory->len * sizeof(int));
           for (int i = 0; i < len; i++) {
-            memory->memory[i] = tape[i] - '0';
+            // tape[i] - '0'
+            memory->memory[i] = get_value(&tape[i]);
           }
         }
       }
@@ -390,10 +369,6 @@ int execute_instruction(char *instruction_str, Machine *machine,
   // Update cell memory value
   memory->memory[machine->cell] = instr->write;
 
-  if (memory->memory[machine->cell] != instr->write) {
-    printf("\033[0;32mUPDATED MEMORY!\n");
-    printf("\033[0m");
-  }
   // Update cell memory position
   if (*instr->dir == '>') {
     if (machine->cell >= memory->len - 1) {
@@ -420,6 +395,9 @@ int execute_instruction(char *instruction_str, Machine *machine,
 
 int main(int argc, char *argv[]) {
   srand(2);
+  clock_t start, end;
+  double cpu_time_used;
+  start = clock();
 
   Machine *machine = init_machine(argv[1]);
 
@@ -473,7 +451,7 @@ int main(int argc, char *argv[]) {
   printf("State: %s | Starting...\n", machine->state);
   while (!hault) {
     draw(machine);
-    if (count > 1000000) {
+    if (count > 200000) {
       break;
     }
     int *cell = &machine->memory->memory[machine->cell];
@@ -496,14 +474,17 @@ int main(int argc, char *argv[]) {
     count++;
     struct timespec ts;
     ts.tv_sec = 0;
-    ts.tv_nsec = 100 * 1000000;
+    ts.tv_nsec = 300 * 1000000;
     nanosleep(&ts, NULL);
   }
   struct timespec ts;
   ts.tv_sec = 0;
-  ts.tv_nsec = 100 * 1000000;
+  ts.tv_nsec = 300 * 1000000;
   nanosleep(&ts, NULL);
   draw(machine);
+  end = clock();
+  cpu_time_used = ((double)(end - start)) / CLOCKS_PER_SEC;
+  printf("Time taken: %f seconds\n", cpu_time_used);
 
   // printf("\nENDING MEMORY:\n");
   // for (int i = 0; i < machine->memory->len; i++) {
